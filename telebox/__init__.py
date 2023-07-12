@@ -1,7 +1,14 @@
 # telebox.py
 import sys
 
+import os
+from pathlib import Path
+
 import requests
+from tqdm import tqdm
+from requests_toolbelt import MultipartEncoder, MultipartEncoderMonitor
+
+import hashlib
 from .config import Config
 
 
@@ -35,6 +42,7 @@ class Telebox:
         self.connect = Connect(Config.TELEBOX_BASE_URI, self.token)
         self.search = Search(self.connect)
         self.folder = Folder(self.connect)
+        self.upload = Upload(self.connect)
         # self.upload_auth = UploadAuthorization(self.connect)
         # self.folder_details = FolderDetails(self.folder_id, self.connect)
         # self.folder_upload = FolderUploadFile(self.folder_id, self.connect)
@@ -162,11 +170,51 @@ class Search:
 
 
 class Upload:
-    def __init__(self, user_id, connect):
+    def __init__(self, connect):
         self.connect = connect
 
-    def prepare(self):
-        return self.connect.get_data(f"authorize?user_id={self.user_id}")
+    def prepare(self, file_md5_of_pre_10m, file_size):
+        return self.connect.get_data(Config.TELEBOX_UPLOAD_FASE1, {'fileMd5ofPre10m': file_md5_of_pre_10m, 'fileSize': file_size})
+
+    @staticmethod
+    def upload(url, file):
+        size = os.path.getsize(file)
+        with open(file, "rb") as file:
+            # Send the PUT request
+            response = requests.put(url, data=file)
+        return response
+
+    def finish_upload(self, file_md5_of_pre_10m, file_size, pid, name):
+        return self.connect.get_data(Config.TELEBOX_UPLOAD_FASE3, {'fileMd5ofPre10m': file_md5_of_pre_10m, 'fileSize': file_size, 'pid': pid, 'diyName': name})
+
+    def upload_file(self, file, folder_id):
+        file_size = os.path.getsize(file)
+        file_md5_of_pre_10m = self.get_md5_of_first_10mb(file)
+        lot = self.prepare(file_md5_of_pre_10m, file_size)
+        if lot['status'] == 600:
+            return 1
+
+        if lot['status'] != 1:
+            sys.exit("Prepare: Execution stopped. Cannot upload files")
+
+        url = lot['data']['signUrl']
+        self.upload(url, file)
+        lotf = self.finish_upload(file_md5_of_pre_10m, file_size, folder_id, os.path.basename(file))
+        if lotf['status'] != 1:
+            sys.exit("Finish Upload: Execution stopped. Cannot upload files")
+
+        return lotf['data']['itemId']
+
+    @staticmethod
+    def get_md5_of_first_10mb(file_path):
+        md5_hash = hashlib.md5()
+
+        with open(file_path, 'rb') as file:
+            chunk = file.read(10 * 1024 * 1024)  # read first 10MB
+            if chunk:
+                md5_hash.update(chunk)
+
+        return md5_hash.hexdigest()
 
 
 class Folder:
