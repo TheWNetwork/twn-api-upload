@@ -1,7 +1,6 @@
-# telebox-api-upload
-TheWNetwork bot to upload massively to a Telebox folder.
+# twn-api-upload
+TheWNetwork bot to upload massively to a Telebox & Terabox folder.
 - Allow Pictures and Videos
-
 
 ## Preparation
 1.  ``pip install -Ur requirements.txt``
@@ -12,16 +11,20 @@ TheWNetwork bot to upload massively to a Telebox folder.
 
 | Variable | Description |
 | --- | --- |
-| USR_TOKEN | Access to https://www.linkbox.to/admin/account and copy "Token" |
-| USR_BASEFOLDER | Access to https://www.linkbox.to/admin/my-files, search the folder you wanna use and copy the ID. <br/>Do it copying from the url bar. <br/>Will have a format-like: https://www.linkbox.to/admin/share-folder/12345678 (12345678 is the ID) |
+| TELEBOX_TOKEN | Access to https://www.linkbox.to/admin/account and copy "Token" |
+| TELEBOX_BASEFOLDER | Access to https://www.linkbox.to/admin/my-files, search the folder you wanna use and copy the ID. <br/>Do it copying from the url bar. <br/>Will have a format-like: https://www.linkbox.to/admin/share-folder/12345678 (12345678 is the ID) |
 
 - ``python -m app --dir <path_to_folder> --filename <filename>``
 
-> ``--dir`` is the path to the folder where the files are located
+> ``--telebox`` upload to telebox (you need to configrue the .env)
 >
+> ``--terabox`` upload to terabox (you need to configrue the .env)
+>
+> ``--dir`` is the path to the folder where the files are located
+> 
 > ``--filename`` is the name of the folder to be uploaded. will be created if not exists on Telebox
 
-- Example: ``python -m app --dir /home/user/Downloads --filename FolderToUpload``
+- Example: ``python -m app --telebox --dir /home/user/Downloads --filename FolderToUpload``
 
 ## Termux pre requisitos
 - ``pkg update``
