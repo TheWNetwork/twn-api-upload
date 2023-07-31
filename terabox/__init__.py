@@ -8,6 +8,9 @@ import json
 import requests
 
 import hashlib
+
+from tqdm import tqdm
+
 from .config import Config
 from urllib.parse import urlencode
 
@@ -18,7 +21,7 @@ class Terabox:
         self.token = token
         self.folder_location = folder_location
         self.connect = HttpClientService(Config.TERABOX_BASE, self.token)
-        self.upload = Upload(self.connect, folder_location, Config.TERABOX_CHUNK_SIZE, )
+        self.upload = Upload(self.connect, folder_location, Config.TERABOX_CHUNK_SIZE)
 
 
 class HttpClientService:
@@ -45,47 +48,55 @@ class HttpClientService:
 
 class Upload:
     def __init__(self, connect, file_location, chunk_size):
+        self.chunk_hashes = None
+        self.size = None
         self.connect = connect
         self.file_location = file_location
         self.chunk_size = chunk_size
 
     def invoke(self, filename):
-        prepare_response = self.prepare(filename)
-        if prepare_response.status_code != 200:
-            print(f"Error occurred while preparing file: {filename}")
-            return False
+        print(f"Uploading file: {filename}")
+        try:
+            prepare_response = self.prepare(filename)
+            if prepare_response['errno'] < 0:
+                print(f"Error occurred while preparing file: {filename}")
+                return False
 
-        upload_response = self.upload(filename, prepare_response)
-        if not upload_response:
+            upload_response = self.upload(filename, prepare_response['request_id'])
+            if not upload_response:
+                print(f"Error occurred while uploading file: {filename}")
+                return False
+
+            complete_response = self.complete(filename, prepare_response['request_id'])
+            if complete_response['errno'] < 0:
+                print(f"Error occurred while completing file: {filename}")
+                return False
+        except Exception as e:
             print(f"Error occurred while uploading file: {filename}")
+            print(e)
             return False
-
-        complete_response = self.complete(filename, prepare_response)
-        if complete_response.status_code != 200:
-            print(f"Error occurred while completing file: {filename}")
-            return False
-
         return True
 
     def prepare(self, filename):
         self.size = os.path.getsize(filename)
-        self.chunk_hashes = []
+        chunk_hashes = []
         with open(filename, "rb") as f:
             while chunk := f.read(self.chunk_size):
                 chunk_md5 = hashlib.md5(chunk).hexdigest()
-                self.chunk_hashes.append(chunk_md5)
+                chunk_hashes.append(chunk_md5)
 
         # Call the Request method with all the MD5 blocks
-        response = self.connect.post('', {'method': 'precreate', 'path': self.file_location, 'autoinit': 1, 'size': self.size, 'block_list': self.chunk_hashes})
-        return response
+        self.chunk_hashes = chunk_hashes
+        return self.connect.post('', {'method': 'precreate'}, {'path': self.file_location, 'autoinit': 1, 'size': self.size, 'block_list': chunk_hashes})
 
-    def upload(self, filename, prepare_response):
+    def upload(self, filename, request_id):
         file_size = os.path.getsize(filename)
 
         # Open file in binary mode
         with (open(filename, 'rb') as file):
-            chunk_no = 0
+            chunk_no = 1
             while True:
+                progress = tqdm(total=len(self.chunk_hashes), ncols=70)
                 # read only specified bytes amount (chunk_size)
                 chunk = file.read(self.chunk_size)
                 if not chunk:
@@ -96,7 +107,7 @@ class Upload:
                 get = {
                     'method': 'upload',
                     'path': self.file_location,
-                    'uploadid': 'UPLOAD_ID',
+                    'uploadid': request_id,
                     'partseq': chunk_no
                 }
 
@@ -105,18 +116,20 @@ class Upload:
                     # specify additional headers as per requirement of your API
                 }
 
-                response = self.connect.post_direct(Config.TERABOX_UPLOAD, get_params=get, post_params={file: chunk}, headers=headers)
+                progress.update(1)
+                response = self.connect.post_direct(Config.TERABOX_UPLOAD, get_params=get, post_params={'file': chunk})
 
-                if response.status_code != 200:
-                    print(f"Error occurred while uploading chunk: {chunk_no}")
-                    return False
+                print(response)
+                #if response != 200:
+                #    print(f"Error occurred while uploading chunk: {chunk_no}")
+                #    return False
 
                 chunk_no += 1
 
         return True
 
-    def complete(self, filename, prepare_response):
+    def complete(self, filename, request_id):
         response = self.connect.post('',
                                      get_params={'method': 'create'},
-                                     post_params={'path': self.file_location, 'size': self.size, 'uploadid': 'UPLOAD_ID', 'block_list': self.chunk_hashes})
+                                     post_params={'path': self.file_location, 'size': self.size, 'uploadid': request_id, 'block_list': self.chunk_hashes})
         return response
