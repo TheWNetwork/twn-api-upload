@@ -16,17 +16,24 @@ TheWNetwork bot to upload massively to a Telebox & Terabox folder.
 
 - ``python -m app --dir <path_to_folder> --filename <filename>``
 
-> ``--telebox`` upload to telebox (you need to configrue the .env)
+> ``--telebox`` upload to telebox (you need to configrue the .env) [Working]
 >
-> ``--terabox`` upload to terabox (you need to configrue the .env)
+> ``--terabox`` upload to terabox (you need to configrue the .env) [MayNotWork]
 >
 > ``--dir`` is the path to the folder where the files are located
 > 
 > ``--filename`` is the name of the folder to be uploaded. will be created if not exists on Telebox
 
+Imagine you have a folder named "FolderToUpload" that have a list of subfolders with names (can be recursive also). 
+You must put on "filename" the folder you wanna upload. This folder WONT be created. (as you already created it on Linkbox)  
+
 - Example: ``python -m app --telebox --dir /home/user/Downloads --filename FolderToUpload``
 
-## Termux pre requisitos
+### Notes
+Telebox speed is stupidly low, it may take a long time to upload large files. 
+Also, the Telebox API does not give any information about how its working so, sorry
+
+## Termux pre requisites
 - ``pkg update``
 - ``pkg in python-numpy -y``
 - ``pkg in opencv-python -y``

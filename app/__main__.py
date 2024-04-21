@@ -15,7 +15,8 @@ if __name__ == '__main__':
     parser.add_argument('--dir', type=str, help='Ruta donde se encuentra en tu equipo la carpeta con el nombre --foldername')
     parser.add_argument('--foldername', type=str, help='Indica el nombre de la carpeta a buscar. Recuerda que debe existir también en la ruta en la que usarás con el parametro --dir.')
     args = parser.parse_args()
-    args.dir = args.dir.replace('\\', '\\\\') + '/' + args.foldername
+    args.basefolder = None
+    args.dir = args.dir.replace('\\', '\\\\')
     datetime1 = datetime.now()
     print(f'Current date is: {datetime1.strftime("%Y-%m-%d %H:%M:%S")}')
 

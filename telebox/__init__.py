@@ -233,7 +233,12 @@ class Folder:
         self.connect = connect
 
     def create(self, filename, destination_folder_id):
-        lot = self.connect.get_data(Config.TELEBOX_FOLDER_CREATE, {'pid': int(destination_folder_id), 'name': filename, 'isShare': 0, 'canInvite': 1, 'canShare': 1, 'withBodyImg': 0,
+        lot = self.connect.get_data(Config.TELEBOX_FOLDER_CREATE, {'pid': int(destination_folder_id),
+                                                                   'name': filename,
+                                                                   'isShare': 0,
+                                                                   'canInvite': 1,
+                                                                   'canShare': 1,
+                                                                   'withBodyImg': 0,
                                                                    'desc': 'TheWNetwork Telebox Mass Creator'})
         if lot['status'] != 1:
             sys.exit("Execution stopped. Cannot create folders")

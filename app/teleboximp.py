@@ -1,5 +1,5 @@
 # -*- encoding: utf-8 -*-
-"""Terabox Implementation module"""
+"""Telebox Implementation module"""
 import logging
 import os
 import sys
@@ -27,25 +27,43 @@ class TeleboxImpl:
         print(f'{i + 1}/{total} - {datetime.now().strftime("%Y-%m-%d %H:%M:%S")} - Uploading file: {file}')
         self.telebox.upload.upload_file(directory + '/' + file, subfolder_pid)
 
-    def doit(self, file_list, len_list, directory, folder_pid):
+    def doit(self, file_list, len_list, directory, folder_pid) -> bool:
+        has_directory: bool = False
         with ThreadPoolExecutor(max_workers=int(Config.USR_LIMIT_CONCURRENT)) as executor:
             for i, file in enumerate(file_list):
                 if os.path.isfile(directory + '/' + file):
-                    executor.submit(TeleboxImpl.upload_file_and_print_status, self, i, len_list, directory, file, folder_pid)
+                    executor.submit(
+                        TeleboxImpl.upload_file_and_print_status,
+                        self,
+                        i,
+                        len_list,
+                        directory,
+                        file,
+                        folder_pid
+                    )
+                if os.path.isdir(directory + '/' + file):
+                    has_directory = True
+        return has_directory
 
     def main(self, arguments):
         logging.basicConfig(level=logging.ERROR)
 
+        currentDir = arguments.dir
+        currentName = arguments.foldername
+
         # Searching if the folder exists
-        folder_pid = self.create_folder_if_not_exists(arguments.foldername, Config.TELEBOX_BASEFOLDER)
+        folder_pid = int(arguments.basefolder or Config.TELEBOX_BASEFOLDER)
+
         folder_data = self.telebox.search.search('', folder_pid)['data']['list']
+
         print('Get Main Folder PID for folder ' + arguments.foldername + ' is ' + str(folder_pid))
-        self.doit(os.listdir(arguments.dir), str(len(os.listdir(arguments.dir))), arguments.dir, folder_pid)
+        if arguments.foldername != 'upload':
+            self.doit(os.listdir(arguments.dir), str(len(os.listdir(arguments.dir))), arguments.dir, folder_pid)
 
-        directories = [d for d in os.listdir(arguments.dir) if os.path.isdir(os.path.join(arguments.dir, d))]
+        directories = [d for d in os.listdir(arguments.dir + '/' + arguments.foldername) if os.path.isdir(os.path.join(arguments.dir + '/' + arguments.foldername, d))]
         for directory in directories:
-            # Create or get Folder IDs
 
+            # Create or get Folder IDs
             print('\n\n######################################')
 
             if folder_data:
@@ -61,18 +79,18 @@ class TeleboxImpl:
             else:
                 subfolder_pid = subfolder[0]['id']
 
-            print('Creating or getting PID for folder:  ' + arguments.foldername + '/' + directory + ' is ' + str(subfolder_pid))
+            print('Creating or getting PID for folder:  ' + currentName + '/' + directory + ' is ' + str(subfolder_pid))
 
             # Upload Files to Telebox
             print('Start Uploading....')
-            file_list = os.listdir(arguments.dir + '/' + directory)
+            file_list = os.listdir(currentDir + '/' + currentName + '/' + directory)
             len_list = str(len(file_list))
-            self.doit(file_list, len_list, arguments.dir + '/' + directory, subfolder_pid)
+            ret: bool = self.doit(file_list, len_list, currentDir + '/' + currentName + '/' + directory, subfolder_pid)
+            if ret:
+                args2 = arguments
+                args2.dir = currentDir + '/' + currentName
+                args2.foldername = directory
+                args2.basefolder = subfolder_pid
+                self.main(args2)
 
-            # for file in file_list:
-            #   i += 1
-            #   print(str(i) + '/' + str(len(file_list)) + ' - Uploading file: ' + file)
-            #   telebox.upload.upload_file(arguments.dir + '/' + directory + '/' + file, subfolder_pid)
             print('End Uploading....')
-
-
