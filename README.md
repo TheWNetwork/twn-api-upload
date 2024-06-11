@@ -11,7 +11,7 @@ TheWNetwork bot to upload massively to a Telebox & Terabox folder.
 
 | Variable | Description |
 | --- | --- |
-| TELEBOX_TOKEN | Access to https://www.linkbox.to/admin/account and copy "Token" |
+| TELEBOX_API | Access to https://www.linkbox.to/admin/account and copy "Token" |
 | TELEBOX_BASEFOLDER | Access to https://www.linkbox.to/admin/my-files, search the folder you wanna use and copy the ID. <br/>Do it copying from the url bar. <br/>Will have a format-like: https://www.linkbox.to/admin/share-folder/12345678 (12345678 is the ID) |
 
 - ``python -m app --dir <path_to_folder> --filename <filename>``
